@@ -1,0 +1,97 @@
+---
+title: 'Identify individuals with #% missing data'
+author: "Diana_modified_from_OLeary"
+date: "2024-08-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+#knitr::opts_chunk$set(echo = TRUE)
+setwd("/dss/dsslegfs01/pr53da/pr53da-dss-0029/diana/paper_final_datasets/vcf_filtering/step3")
+```
+
+# Loading libraries
+```{r Loading libraries}
+library(tidyr)
+library(tibble)
+library(broom)
+library(reshape2)
+library(plyr)
+library(dplyr)
+
+library(ggplot2)
+library(ggthemes)
+
+```
+
+# Standardizing the plots
+```{r Standardizing the plots}
+# Modifying ggplot themes
+
+theme_standard <- theme_classic() +
+  theme(
+    axis.text = element_text(size = 11),
+    axis.title = element_text(size = 16),
+    axis.title.y = element_text(vjust = 1.5),
+    
+    legend.position = "bottom",
+    
+    panel.background = element_rect(fill = "white", color = NA), 
+    panel.border = element_blank(), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(), 
+    strip.background = element_rect(fill = "grey95", color = "black"), 
+    strip.text.x = element_text(size = 16),
+    strip.text.y = element_text(size = 16)) 
+
+```
+
+# Identify individuals with #% of missing data
+Don't forget to change the # % accordingly for each iteration.
+```{r Identifying individuals with #% of missing data}
+
+library(magrittr)
+
+imissing <- read.table("/dss/dsslegfs01/pr53da/pr53da-dss-0029/diana/paper_final_datasets/vcf_filtering/step3/Alps_3_it3.imiss", header = TRUE, stringsAsFactors = FALSE)
+
+# Set the threshold of missing data per individual (imiss). Individuals with missing value frequency (F_MISS) > than this value m will be removed. Don't forget to change m accordingly for each iteration.
+m <- 0.7
+
+
+# We take the imissing data frame, filter it to keep only the rows where the missing value frequency (F_MISS) > m, and then selects only the "INDV" column from the filtered data. The final result is stored in the variable "LQ_indv".
+
+#LQ_indv: data frame with the labels of the individuals with F_MISS > m.
+LQ_indv <- imissing %>%
+  filter(F_MISS > m) %>%
+  select(INDV)
+
+# Save and export LQ_indv
+write.table(LQ_indv, "/dss/dsslegfs01/pr53da/pr53da-dss-0029/diana/paper_final_datasets/vcf_filtering/step3/LQ_Ind_FMDI-70", col.names = FALSE, row.names = FALSE, quote = FALSE)
+
+
+# Create a plot to visualize the individuals that will be removed in this iteration based on their missing data. the mean values is in blue and threshold m in red.
+
+pms <- ggplot(imissing, aes(x = F_MISS)) +
+  geom_histogram(binwidth = .01, color = "black", fill = "grey95") +
+  geom_vline(aes(xintercept = mean(F_MISS, na.rm = TRUE)),
+                 color = "#1434A4", linetype = "dashed", linewidth = 1) +
+  geom_vline(aes(xintercept = m),
+                 color = "red", linetype = "dashed", linewidth = 1) +
+  labs(x = "missing data per indv", y = "number of individuals") +
+  scale_x_continuous(limits = c(0, 1)) +
+  theme_standard
+
+ggsave(
+  paste("/dss/dsslegfs01/pr53da/pr53da-dss-0029/diana/paper_final_datasets/vcf_filtering/step3/plots_step3/FMDI_imiss_filter/FMDI_it3_plot_mdperindiv",".png", sep=""), 
+  plot = pms, 
+  device = "png", 
+  dpi = 400, # dots per inch --> resolution of image, 300 usually min for publications
+  width = 8,  # specify width in inches
+  height = 6  # specify height in inches
+)
+
+```
+The individuals that are in the right of the red line (value of filter), will be removed.
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

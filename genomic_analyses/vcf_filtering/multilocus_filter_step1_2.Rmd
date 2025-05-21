@@ -1,0 +1,113 @@
+---
+title: "1_2. Removing multilocus contigs"
+author: "Diana Gonzalez"
+date: "2024-03-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+# Loading libraries
+
+```{r Loading libraries}
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+
+```
+
+# Standardizing the plot
+```{r Standardizing the plots}
+# modified ggplot themes
+
+
+theme_standard <- theme_classic() +
+  theme(
+    axis.text = element_text(size = 11),
+    axis.title = element_text(size = 16),
+    axis.title.y = element_text(vjust = 1.5),
+    
+    legend.position = "bottom",
+    
+    panel.background = element_rect(fill = "white", color = NA), 
+    panel.border = element_blank(), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(), 
+    strip.background = element_rect(fill = "grey95", color = "black"), 
+    strip.text.x = element_text(size = 16),
+    strip.text.y = element_text(size = 16)) 
+
+
+```
+
+
+
+# Plot the average depth distribution
+
+```{r Plotting}
+
+# Info site mean depth
+site_meandepth <- read.table("/dss/dsslegfs01/pr53da/pr53da-dss-0029/diana/paper_final_datasets/vcf_filtering/step1_2/Alps_1_nomismatchedind.ldepth.mean", header = TRUE, stringsAsFactors = FALSE)
+head(site_meandepth)
+
+max <- max(site_meandepth$MEAN_DEPTH)
+#2455.35 (paper step 2)
+
+
+# Calculate mean depth 95th percentile of the values in MEAN_DEPTH column of the site_meandepth data frame
+q <- quantile(site_meandepth$MEAN_DEPTH, probs = 0.95)
+#2.06311
+#As the 95th quantile is extremely low, we decided to set the threshold at 500. So all the SNPs with a coverage higher than 500X will be removed.
+q <- 500
+
+
+
+# Plot distribution mean read depth per locus vs # of loci (same plot as p8 in "summary_plots.Rmd" file)
+median_value <- median(site_meandepth$MEAN_DEPTH)
+#0.407767
+m <- mean(site_meandepth$MEAN_DEPTH, na.rm = TRUE)
+#0.7158295
+max(site_meandepth$MEAN_DEPTH, na.rm = TRUE)
+#2455.35
+
+p8 <- ggplot(site_meandepth, aes(x = MEAN_DEPTH)) +
+  geom_histogram(binwidth = 50, color = "black", fill = "grey95") +
+  geom_vline(aes(xintercept = m),
+                 color = "#1434A4", linetype = "solid", size = 1) +
+  geom_vline(xintercept = median_value, color = "black",
+             linetype = "dashed", linewidth = .5) +
+  geom_vline(aes(xintercept = q),
+                 color = "red", linetype = "dashed", linewidth = 1) +
+  scale_y_continuous(limits = c(0, 50)) +
+  labs(x = "mean read depth", y = "number of SNPs") +
+  theme_standard
+p8
+
+ggsave(
+  paste("/dss/dsslegfs01/pr53da/pr53da-dss-0029/diana/paper_final_datasets/vcf_filtering/step1_2/multilocus_500threshold_p8",".png", sep=""), 
+  plot = p8, 
+  device = "png", 
+  dpi = 400, # dots per inch --> resolution of image, 300 usually min for publications
+  width = 8,  # specify width in inches
+  height = 6  # specify height in inches
+)
+
+
+```
+
+# Create a table of SNPs to remove
+```{r list of SNPs to remove}
+
+# Create table of the SNPs (CHROM and POS info) with coverage greater than the value of q
+exclude_500 <- dplyr::filter(site_meandepth, MEAN_DEPTH > q) %>%
+ dplyr::select(CHROM, POS)
+#change path accordingly
+write.table(exclude_500, file = "/dss/dsslegfs01/pr53da/pr53da-dss-0029/diana/paper_final_datasets/vcf_filtering/step1_2/Alps_1_exclude_500.txt", row.names = F, quote = F)
+
+```
+
+
