@@ -1,12 +1,12 @@
 # Clarifying diversity in the radiation of Chorthippus grasshoppers (Orthoptera: Acrididae) through an integration of genomic and morphometric approaches
 
-This repository contains all required code and scripts to do the morphometric and genomic analysis that were carried out for the scientific publication titled "Clarifying diversity in the radiation of _Chorthippus_ grasshoppers (Orthoptera: Acrididae) through an integration of genomic and morphometric approaches".   
+This repository contains all required code and scripts to do the morphometric and genomic analysis that were carried out for the scientific publication titled "_Clarifying diversity in the radiation of _Chorthippus_ grasshoppers (Orthoptera: Acrididae) through an integration of genomic and morphometric approaches_".   
 
-We have two folders divived based on the genomics or morphometric portions of the analysis.  
+This repository contains two folders divived based on the genomics or morphometric portions of the analysis.  
 
-The pictures of the grasshopper forewings used for the morphometric analyses can be found in the following public repository: [LINK](https://osf.io/mzy57/)  
-
-Linked genomic data - NCBI SRA Accession number: BioProject PRJNA1271307  
+Data regarding morphometric analysis and genome sequences can be found as follows:
+1. The **pictures of the grasshopper forewings** used for the morphometric analyses can be found in the following public repository: [OSF Chorthippus Alps](https://osf.io/mzy57/)  
+2. **Linked genomic data - NCBI SRA Accession number**: BioProject PRJNA1271307  
 
 # Citation
 
