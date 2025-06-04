@@ -5,7 +5,7 @@ This repository contains all required code and scripts to do the morphometric an
 This repository contains two folders divived based on the genomics or morphometric portions of the analysis.  
 
 Data regarding morphometric analysis and genome sequences can be found as follows:
-1. The **pictures of the grasshopper forewings** used for the morphometric analyses can be found in the following public repository: [OSF Chorthippus Alps](https://osf.io/mzy57/)  
+1. The **pictures of the grasshopper forewings**: [OSF Chorthippus Alps](https://osf.io/mzy57/)  
 2. **Linked genomic data - NCBI SRA Accession number**: BioProject PRJNA1271307  
 
 # Citation
