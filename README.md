@@ -6,9 +6,7 @@ We have two folders divived based on the genomics or morphometric portions of th
 
 The pictures of the grasshopper forewings used for the morphometric analyses can be found in the following public repository: [LINK](https://osf.io/mzy57/)  
 
-Linked genomic data - NCBI SRA Accession number:
-BioProject PRJNA1271307
-BioSample Acc. SAMN48861008-SAMN48861213
+Linked genomic data - NCBI SRA Accession number: BioProject PRJNA1271307  
 
 # Citation
 
