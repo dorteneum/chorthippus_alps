@@ -8,4 +8,7 @@ The pictures of the grasshopper forewings used for the morphometric analyses can
 The genomic data used for this study can be found in the following public NCBI repository: LINK  
 
 # Citation
-HERE GOES FULL CITATION OF PAPER
+
+Clarifying diversity in the radiation of Chorthippus grasshoppers (Orthoptera: Acrididae) through an integration of genomic and morphometric approaches
+
+https://doi.org/10.1093/zoolinnean/zlaf076
