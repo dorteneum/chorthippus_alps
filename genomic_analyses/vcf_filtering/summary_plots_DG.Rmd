@@ -1,0 +1,645 @@
+---
+title: "summary_plots"
+output: html_document
+date: "2023-05-25"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+## Information needed for this script:
+ - individual missing data (.imiss) and individual mean depth coverage(.ldepth.mean)
+ - Fis per individual (.het), missing data per site (.lmiss) and missing data per locus (filter SNPs for max value)
+ - mean depth coverage per site (.ldepth.mean), and mean depth coverage per locus (filter SNPs for max value)
+- locus length file (.loci file filtered for one raw per locus, then count length (i.e. characters in line)) using filter_loci_length.py script.
+
+## Vcftools functions:
+### Depth indv/locus
+--depth
+".idepth" file with the mean depth per individual.
+
+--site-mean-depth
+".ldepth.mean" file with mean depth per site averaged across all individuals. 
+
+--geno-depth
+".gdepth" file with depth for each genotype in the VCF file.
+
+### Missing data indv/locus
+--missing-indv
+".imiss" file with missingness on a per-individual basis.
+
+--missing-site
+".lmiss" file with missingness on a per-site basis.
+
+### Allele freq/indv freq buden
+--indv-freq-burden
+".ifreqburden" file with number of variants within each individual of a specific frequency.
+
+--freq2
+".frq" file with allele frequency for each site but suppress output of any information about the alleles.
+
+--singletons
+".singletons" file with location of singletons, and the individual they occur in.
+
+--012
+".012", ".012.indv" and ".012.pos" files are the outputs of the genotypes as a large matrix.
+
+### Heterozygosity per individual
+--het
+".het" file. Calculates a measure of heterozygosity on a per-individual basis (the inbreeding coefficient, F).
+
+### SNP call quality
+--site-quality
+".lqual" file with per-site SNP quality.
+
+
+# Run the Bash script "Alps_rawscript.sh" in the BioHPC cluster using Vcftools
+
+The input file is at Ricardo's container: /dss/dsslegfs01/pr53da/pr53da-dss-0029/diana/data/alps_wocgn_7added.vcf
+
+The Alps_rawscript.sh script is in the folder /dss/dsshome1/0A/ra93rey/vcf and looks like this:
+
+#!/bin/bash
+#SBATCH --get-user-env
+#SBATCH --clusters=biohpc_gen
+#SBATCH --partition=biohpc_gen_normal
+#SBATCH --cpus-per-task=1
+#SBATCH --mem-per-cpu=4763mb
+#SBATCH --time=2:00:00
+#SBATCH -J Alps_rawscript.sh
+
+
+vcftools --vcf /dss/dsslegfs01/pr53da/pr53da-dss-0029/diana/data/alps_wocgn_7added.vcf --out ~/vcf/rawresults/Alps_raw --depth
+vcftools --vcf /dss/dsslegfs01/pr53da/pr53da-dss-0029/diana/data/alps_wocgn_7added.vcf --out ~/vcf/rawresults/Alps_raw --site-mean-depth
+vcftools --vcf /dss/dsslegfs01/pr53da/pr53da-dss-0029/diana/data/alps_wocgn_7added.vcf --out ~/vcf/rawresults/Alps_raw --geno-depth
+
+vcftools --vcf /dss/dsslegfs01/pr53da/pr53da-dss-0029/diana/data/alps_wocgn_7added.vcf --out ~/vcf/rawresults/Alps_raw --missing-indv
+vcftools --vcf /dss/dsslegfs01/pr53da/pr53da-dss-0029/diana/data/alps_wocgn_7added.vcf --out ~/vcf/rawresults/Alps_raw --missing-site
+
+vcftools --vcf /dss/dsslegfs01/pr53da/pr53da-dss-0029/diana/data/alps_wocgn_7added.vcf --out ~/vcf/rawresults/Alps_raw --indv-freq-burden
+vcftools --vcf /dss/dsslegfs01/pr53da/pr53da-dss-0029/diana/data/alps_wocgn_7added.vcf --out ~/vcf/rawresults/Alps_raw --freq2
+vcftools --vcf /dss/dsslegfs01/pr53da/pr53da-dss-0029/diana/data/alps_wocgn_7added.vcf --out ~/vcf/rawresults/Alps_raw --singletons
+vcftools --vcf /dss/dsslegfs01/pr53da/pr53da-dss-0029/diana/data/alps_wocgn_7added.vcf --out ~/vcf/rawresults/Alps_raw --012
+
+vcftools --vcf /dss/dsslegfs01/pr53da/pr53da-dss-0029/diana/data/alps_wocgn_7added.vcf --out ~/vcf/rawresults/Alps_raw --het
+
+vcftools --vcf /dss/dsslegfs01/pr53da/pr53da-dss-0029/diana/data/alps_wocgn_7added.vcf --out ~/vcf/rawresults/Alps_raw --site-quality
+
+
+
+# Setting directory and loading packages
+
+```{r Setting directory}
+#Seting directory for all the chunks
+knitr::opts_knit$set(root.dir = "/dss/dsshome1/0A/ra93rey/vcf/rawresults")
+
+```
+
+
+```{r Loading packages}
+
+?.libPaths
+#gets/sets the library trees within which packages are looked for.
+#.libPaths(c(.libPaths(),"/dss/dsslegfs01/pr53da/pr53da-dss-0029/diana/Rstudio"))
+
+#load packages
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+#for arranging multiple graphs for publication
+#library(ggpubr)
+#for color palette
+#library(wesanderson)
+library(RColorBrewer)
+
+
+#Extra libraries from O'Leari
+# libraries for data wrangling
+##library(tidyr)
+#library(tibble)
+#library(broom)
+#library(reshape2)
+#library(plyr)
+##library(dplyr)
+
+# libraries for data visualization
+##library(ggplot2)
+#library(ggthemes)
+## library(akima)
+## library(xtable)
+## library(DiagrammeR)
+#library(Cairo)
+#library(viridis)
+#library(patchwork)
+
+# libraries for mapping
+#library(rgdal)
+#library(maps)
+#library(mapdata)
+#library(mapproj)
+# library(marmap)
+# library(ggmap)
+
+# libraries for pop gen analysis
+# library(readGenalex)
+#library(adegenet)
+#library(hierfstat)
+#library(pegas)
+#library(poppr)
+#library(mmod)
+# library(strataG)
+#library(LEA)
+## library(tess3r)
+## library(related)
+
+# libraries for reproducible report writing
+## install_github("ramnathv/slidify ")
+## install_github("ramnathv/slidifyLibraries")
+## library(slidify)
+## library(knitr)
+## library(markdown)
+
+
+
+
+
+# use color palette:
+#?wes_palette
+#wes_palette("Darjeeling1")
+#library(RColorBrewer)
+
+
+#Seing data
+#wholedata <- read.table("alps_wocgn.vcf", header = T, sep = "\t")
+
+```
+
+# Setting ggplot themes
+Let's create some ggplot themes that will be used for all the plots that will be produced. In this way the format of the graphics will be standardized.
+
+```{r ggplot themes}
+
+#Theme facet
+theme_facet <- theme_classic() +
+  theme(
+    axis.text = element_text(size = 11),
+    axis.title = element_text(size = 16),
+    axis.title.y = element_text(vjust = 1.5),
+    
+    legend.position = "bottom",
+    
+    panel.background = element_rect(fill = "white", color = NA), 
+    panel.border = element_rect(fill = NA, color = "black"), 
+    panel.grid.major = element_line(color = "grey85"), 
+    panel.grid.minor = element_blank(), 
+    strip.background = element_rect(fill = "grey95", color = "black"), 
+    strip.text.x = element_text(size = 16),
+    strip.text.y = element_text(size = 16))  
+
+#Theme standard
+theme_standard <- theme_classic() +
+  theme(
+    axis.text = element_text(size = 11),
+    axis.title = element_text(size = 16),
+    axis.title.y = element_text(vjust = 1.5),
+    
+    legend.position = "bottom",
+    
+    panel.background = element_rect(fill = "white", color = NA), 
+    panel.border = element_blank(), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(), 
+    strip.background = element_rect(fill = "grey95", color = "black"), 
+    strip.text.x = element_text(size = 16),
+    strip.text.y = element_text(size = 16)) 
+
+# add to ggplot.R script?
+
+# Multiple plot function:
+#(http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/)
+#
+# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+# - cols:   Number of columns in layout
+# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+#
+# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+# then plot 1 will go in the upper left, 2 will go in the upper right, and
+# 3 will go all the way across the bottom.
+#
+#multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+#  library(grid)
+  
+  # Make a list from the ... arguments and plotlist
+#  plots <- c(list(...), plotlist)
+  
+#  numPlots = length(plots)
+  
+  # If layout is NULL, then use 'cols' to determine layout
+#  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+#    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+#                     ncol = cols, nrow = ceiling(numPlots/cols))
+ # }
+  
+#  if (numPlots==1) {
+#    print(plots[[1]])
+    
+#  } else {
+    # Set up the page
+#    grid.newpage()
+#    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+    
+    # Make each plot, in the correct location
+#    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+#      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+      
+#      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+#                                      layout.pos.col = matchidx$col))
+#    }
+#  }
+#}
+
+```
+
+
+# Reading VCFtools files function: individual stats files
+
+IMPORTANT!!
+Each time you run again and have new input data (vcf files run in the cluster), you need to **change** in this chunk:
+- the **path to the data** ("**dir**" in this moment it is "/dss/dsslegfs01/pr53da/pr53da-dss-0029/diana/vcf/resultsraw")
+- the **name of the vcf file** ("**vcf**" in this moment it is "Alps_raw")
+
+```{r Reading VCFtools: ind stats files}
+
+#library(dplyr)
+
+# read individual stats files generated using vcftools
+# specify data path (dir) and name of file to be loaded (vcf) without the file ending
+# will load all .het, .idepth and .imiss files and join into one data frame
+
+dir <- c("/dss/dsshome1/0A/ra93rey/vcf/step3")
+vcf <- c("Alpsmac_linked_95th")
+
+read.ind.stats <- function(dir, vcf) {
+  # read depth stats
+  filename <- paste(vcf, ".idepth", sep = "")
+  path <- file.path(dir, filename)
+  idepth <- read.delim(path, header = TRUE, stringsAsFactors = FALSE)
+  names(idepth) <- c("INDV",
+                     paste("SITES", vcf, sep = "_"),
+                     paste("MEAN_DEPTH", vcf, sep = "_"))
+  
+  # read missing stats
+  filename <- paste(vcf, ".imiss", sep = "")
+  path <- file.path(dir, filename)
+  imiss <- read.delim(path, header = TRUE, stringsAsFactors = FALSE) %>%
+    select(INDV, F_MISS)
+  names(imiss) <- c("INDV",
+                    paste("MISS", vcf, sep = "_"))
+  # join stats
+  temp <- left_join(imiss, idepth)
+  
+  # read missing stats
+  filename <- paste(vcf, ".het", sep = "")
+  path <- file.path(dir, filename)
+  het <- read.delim(path, header = TRUE, stringsAsFactors = FALSE) %>%
+    select(INDV, `F`)
+  names(het) <- c("INDV",
+                    paste("Fis", vcf, sep = "_"))
+  # join stats
+  final <- left_join(temp, het)
+}
+
+## ------------------------------------------------------------------------- ##
+
+
+```
+
+
+# Reading VCFtools files function: locus stats files
+
+```{r Reading VCFtools: locus stats files}
+#library(dplyr)
+
+# read locus stats files generated using vcftools
+# specify data path (dir) and name of file to be loaded (vcf) without the file ending)
+# will load all .het, .idepth and .imiss files and join into one data frame
+
+read.loc.stats <- function(dir, vcf) {
+  # read depth stats
+  filename <- paste(vcf, ".ldepth.mean", sep = "")
+  path <- file.path(dir, filename)
+  ldepth <- read.delim(path, header = TRUE, stringsAsFactors = FALSE)
+  names(ldepth) <- c("CHR", "POS", 
+                     paste("MEAN_DEPTH", vcf, sep = "_"), paste("VAR_DEPTH", vcf, sep = "_"))
+  
+  # read missing stats
+  filename <- paste(vcf, ".lmiss", sep = "")
+  path <- file.path(dir, filename)
+  lmiss <- read.delim(path, header = TRUE, stringsAsFactors = FALSE) %>%
+    select(CHR, POS, F_MISS)
+  names(lmiss) <- c("CHR", "POS", paste("MISS", vcf, sep = "_"))
+  # join stats
+  temp <- left_join(lmiss, ldepth)
+}
+
+## ------------------------------------------------------------------------- ##
+```
+
+# Extra functions
+We will create some extra functions such as the mode and geo distance.
+
+FOR THE MOMENT LET'S DONT RUN THIS CHUNK
+
+
+```{r Extra functions}
+# Mode
+#Mode <- function(x) {
+#  ux <- unique(x)
+#  ux[which.max(tabulate(match(x, ux)))]
+#}
+
+# from http://eurekastatistics.com/calculating-a-distance-matrix-for-geographic-points-using-r
+
+# for gdist function need package
+#library(Imap)
+
+# takes data frame with location / lat / long
+
+#ReplaceLowerOrUpperTriangle <- function(m, triangle.to.replace){
+  # If triangle.to.replace="lower", replaces the lower triangle of a square matrix with its upper triangle.
+  # If triangle.to.replace="upper", replaces the upper triangle of a square matrix with its lower triangle.
+  
+  #if (nrow(m) != ncol(m)) stop("Supplied matrix must be square.")
+  #if      (tolower(triangle.to.replace) == "lower") tri <- lower.tri(m)
+  #else if (tolower(triangle.to.replace) == "upper") tri <- upper.tri(m)
+  #else stop("triangle.to.replace must be set to 'lower' or 'upper'.")
+  #m[tri] <- t(m)[tri]
+  #return(m)
+#}
+
+#GeoDistanceInMetresMatrix <- function(df.geopoints){
+  # Returns a matrix (M) of distances between geographic points.
+  # M[i,j] = M[j,i] = Distance between (df.geopoints$lat[i], df.geopoints$lon[i]) and
+  # (df.geopoints$lat[j], df.geopoints$lon[j]).
+  # The row and column names are given by df.geopoints$name.
+  
+  #GeoDistanceInMetres <- function(g1, g2){
+    # Returns a vector of distances. (But if g1$index > g2$index, returns zero.)
+    # The 1st value in the returned vector is the distance between g1[[1]] and g2[[1]].
+    # The 2nd value in the returned vector is the distance between g1[[2]] and g2[[2]]. Etc.
+    # Each g1[[x]] or g2[[x]] must be a list with named elements "index", "lat" and "lon".
+    # E.g. g1 <- list(list("index"=1, "lat"=12.1, "lon"=10.1), list("index"=3, "lat"=12.1, "lon"=13.2))
+   # DistM <- function(g1, g2){
+    #  require("Imap")
+     # return(ifelse(g1$index > g2$index, 0, gdist(lat.1=g1$lat, lon.1=g1$lon, lat.2=g2$lat, lon.2=g2$lon, units="m")))
+   # }
+    #return(mapply(DistM, g1, g2))
+  #}
+  
+#  n.geopoints <- nrow(df.geopoints)
+  
+  # The index column is used to ensure we only do calculations for the upper triangle of points
+ # df.geopoints$index <- 1:n.geopoints
+  
+  # Create a list of lists
+  #list.geopoints <- by(df.geopoints[,c("index", "lat", "lon")], 1:n.geopoints, function(x){return(list(x))})
+  
+  # Get a matrix of distances (in metres)
+  #mat.distances <- ReplaceLowerOrUpperTriangle(outer(list.geopoints, list.geopoints, GeoDistanceInMetres), "lower")
+  
+  # Set the row and column names
+  #rownames(mat.distances) <- df.geopoints$name
+  #colnames(mat.distances) <- df.geopoints$name
+  
+  #return(mat.distances)
+#}
+```
+
+### I CHECKED THE CHUNK; I DIDNT UNDERSTAND SO MUCH WHAT IT DOES SO LETS DONT RUN IT FOR THE MOMENT
+
+
+
+# Creating plots
+
+IMPORTANT!!
+Each time you run again and have new input data (vcf files run in the cluster), you need to **change** in this chunk:
+- the **path to the data** ("**dir**" in this moment it is "resultsraw")
+- the **name of the vcf file** ("**vcf**" in this moment it is "Alps_raw")
+
+```{r Visualization, echo=FALSE}
+# load stats files (individual and locus) ----
+ind_stats_raw <- read.ind.stats(dir = "/dss/dsshome1/0A/ra93rey/vcf/step3", vcf = "Alpsmac_linked_95th")
+
+loc_stats_raw <- read.loc.stats(dir = "/dss/dsshome1/0A/ra93rey/vcf/step3", vcf = "Alpsmac_linked_95th")
+
+#PLOTS PER INDIVIDUALS
+# plot missing data per indv ----: Fig2.b (I think)
+median_value <- median(ind_stats_raw$MISS_Alpsmac_linked_95th)
+p1 <- ggplot(ind_stats_raw, aes(x = MISS_Alpsmac_linked_95th)) +
+  geom_histogram(binwidth = .01, color = "black", fill = "grey95") +
+  geom_vline(aes(xintercept = mean(MISS_Alpsmac_linked_95th, na.rm = TRUE)),
+                 color = "darkblue", linetype = "solid", linewidth = 1) +
+  geom_vline(xintercept = median_value, color = "black",
+             linetype = "dashed", linewidth = .5) +
+  #geom_vline(aes(xintercept = 0.5),
+  #               color = "red", linetype = "dashed", linewidth = 1) +
+  labs(x = "missing data per indv", y = "number of individuals") +
+  #xlim(c(0, .6)) +
+  theme_standard
+#p1
+#ggsave(paste("/dss/dsshome1/0A/ra93rey/vcf/step3/plots/datasetB_p1",".png", sep=""), plot = p1, device = "png", dpi = 300)
+
+
+# plot Fis (measure of heterozygosity) per indv ----: not in paper
+p2 <- ggplot(ind_stats_raw, aes(x = Fis_Alpsmac_linked_95th)) +
+  geom_histogram(binwidth = .01, color = "black", fill = "grey95") +
+  geom_vline(aes(xintercept = mean(Fis_Alpsmac_linked_95th, na.rm = TRUE)),
+                 color = "darkblue", linetype = "dashed", size = .8) +
+  #geom_vline(aes(xintercept = 0),
+  #               color = "red", linetype = "dashed", size = 1) +
+  labs(x = "Fis per indv", y = "number of individuals") +
+  xlim(c(0.5, 1))+
+  theme_standard
+#p2
+#ggsave(paste("/dss/dsshome1/0A/ra93rey/vcf/step3/plots/datasetB_p2",".png", sep=""), plot = p1, device = "png", dpi = 300)
+
+
+# plot read depth per indv ----
+median_value <- median(ind_stats_raw$MEAN_DEPTH_Alpsmac_linked_95th)
+p3 <- ggplot(ind_stats_raw, aes(x = MEAN_DEPTH_Alpsmac_linked_95th)) +
+  geom_histogram(binwidth = 1, color = "black", fill = "grey95") +
+  geom_vline(aes(xintercept = mean(MEAN_DEPTH_Alpsmac_linked_95th, na.rm = TRUE)),
+                 color = "darkblue", linetype = "solid", size = 1) +
+  geom_vline(xintercept = median_value, color = "black",
+             linetype = "dashed", linewidth = .5) +
+  labs(x = "mean read depth per indv", y = "number of individuals") +
+  #xlim(c(0, 50)) +
+  theme_standard
+
+
+# plot mean depth vs missing data----
+p4 <- ggplot(ind_stats_raw, aes(x = MEAN_DEPTH_Alpsmac_linked_95th, y = MISS_Alpsmac_linked_95th)) +
+  geom_point() +
+  geom_vline(aes(xintercept = mean(MEAN_DEPTH_Alpsmac_linked_95th, na.rm = TRUE)),
+                 color = "darkblue", linetype = "dashed", size = 1) +
+  geom_vline(aes(xintercept = 15),
+                 color = "red", linetype = "dashed", size = 1) +
+  geom_hline(aes(yintercept = mean(MISS_Alpsmac_linked_95th, na.rm = TRUE)),
+                 color = "darkblue", linetype = "dashed", size = 1) +
+  geom_hline(aes(yintercept = 0.5),
+                 color = "red", linetype = "dashed", size = 1) +
+  labs(x = "mean depth per indv", y = "% missing data") +
+  theme_standard
+#p4
+
+# plot Fis vs missing data per indv ----
+p5 <- ggplot(ind_stats_raw, aes(x = Fis_Alpsmac_linked_95th, y = MISS_Alpsmac_linked_95th)) +
+  geom_point() +
+  geom_vline(aes(xintercept = mean(Fis_Alpsmac_linked_95th, na.rm = TRUE)),
+                 color = "darkblue", linetype = "dashed", size = 1) +
+  geom_vline(aes(xintercept = 0),
+                 color = "red", linetype = "dashed", size = 1) +
+  geom_hline(aes(yintercept = mean(MISS_Alpsmac_linked_95th, na.rm = TRUE)),
+                 color = "darkblue", linetype = "dashed", size = 1) +
+  geom_hline(aes(yintercept = 0.5),
+                 color = "red", linetype = "dashed", size = 1) +
+  labs(x = "Fis per indv", y = "% missing data") +
+  theme_standard
+#p5
+
+# plot Fis vs mean depth per indv ----
+p6 <- ggplot(ind_stats_raw, aes(x = Fis_Alpsmac_linked_95th, y = MEAN_DEPTH_Alpsmac_linked_95th)) +
+  geom_point() +
+  geom_vline(aes(xintercept = mean(Fis_Alpsmac_linked_95th, na.rm = TRUE)),
+                 color = "darkblue", linetype = "dashed", size = 1) +
+  geom_vline(aes(xintercept = 0),
+                 color = "red", linetype = "dashed", size = 1) +
+  geom_hline(aes(yintercept = mean(MEAN_DEPTH_Alpsmac_linked_95th, na.rm = TRUE)),
+                 color = "darkblue", linetype = "dashed", size = 1) +
+  geom_hline(aes(yintercept = 15),
+                 color = "red", linetype = "dashed", size = 1) +
+  labs(x = "Fis per indv", y = "mean depth per indv") +
+  theme_standard
+#p6
+
+#PLOTS PER LOCUS
+# plot distribution missing data per locus ----: Fig2.a
+median_value <- median(loc_stats_raw$MISS_Alpsmac_linked_95th)
+p7 <- ggplot(loc_stats_raw, aes(x = MISS_Alpsmac_linked_95th)) +
+  geom_histogram(binwidth = 0.01, color = "black", fill = "grey95") +
+  geom_vline(aes(xintercept = mean(MISS_Alpsmac_linked_95th, na.rm = TRUE)),
+                 color = "darkblue", linetype = "solid", size = 1) +
+  geom_vline(xintercept = median_value, color = "black",
+             linetype = "dashed", linewidth = .5) +
+  #geom_vline(aes(xintercept = 0.1),
+  #               color = "red", linetype = "dashed", size = 1) +
+  labs(x = "% missing data per locus", y = "number of loci") +
+  xlim(c(0, .35)) +
+  theme_standard
+p7
+
+# plot distribution mean read depth per locus ----
+median_value <- median(loc_stats_raw$MEAN_DEPTH_Alpsmac_linked_95th)
+m <- mean(loc_stats_raw$MEAN_DEPTH_Alpsmac_linked_95th, na.rm = TRUE)
+#ymax <- 2.5*10^6
+p8 <- ggplot(loc_stats_raw, aes(x = MEAN_DEPTH_Alpsmac_linked_95th)) +
+  geom_histogram(binwidth = 1, color = "black", fill = "grey95") +
+  geom_vline(aes(xintercept = m),
+                 color = "darkblue", linetype = "solid", size = 1) +
+  geom_vline(xintercept = median_value, color = "black",
+             linetype = "dashed", linewidth = .5) +
+  #geom_vline(aes(xintercept = 20),
+  #               color = "red", linetype = "dashed", size = 1) + 
+  #coord_cartesian(xlim = c(0, 100)) +
+  labs(x = "mean read depth per locus", y = "number of loci") +
+  #xlim(c(0, 15)) +
+  #ylim(c(0, ymax)) +
+  theme_standard
+p8
+
+# plot distribution mean read depth per locus ----
+p8 <- ggplot(loc_stats_raw, aes(x = MEAN_DEPTH_Alpsmac_linked_95th)) +
+  geom_histogram(binwidth = 1, color = "black", fill = "grey95") +
+  geom_vline(aes(xintercept = mean(MEAN_DEPTH_Alpsmac_linked_95th, na.rm = TRUE)),
+                 color = "darkblue", linetype = "dashed", size = 1) +
+  #geom_vline(aes(xintercept = mean(MEAN_DEPTH_Alpsmac_linked_95th, na.rm = TRUE)),
+  #               color = "darkblue", linetype = "dashed", size = 1) +
+  #geom_vline(aes(xintercept = 20),
+  #               color = "red", linetype = "dashed", size = 1) + 
+  #coord_cartesian(xlim = c(0, 100)) +
+  labs(x = "mean read depth per locus", y = "number of loci") +
+  xlim(c(0, 100)) +
+  theme_standard
+p8
+
+# plot read depth vs missing data ----
+#p9 <- ggplot(loc_stats_raw, aes(x = MEAN_DEPTH_Alps_raw, y = MISS_Alps_raw)) +
+#  geom_point() +
+#  geom_vline(aes(xintercept = mean(MEAN_DEPTH_Alps_raw, na.rm = TRUE)),
+#                 color = "red", linetype = "dashed", size = 1) +
+#  geom_vline(aes(xintercept = 20),
+#                 color = "darkblue", linetype = "dashed", size = 1) +
+#  geom_hline(aes(yintercept = mean(MISS_Alps_raw, na.rm = TRUE)),
+#                 color = "red", linetype = "dashed", size = 1) +
+#  geom_hline(aes(yintercept = 0.1),
+#                 color = "darkblue", linetype = "dashed", size = 1) +
+#  labs(x = "mean depth per locus", y = "% missing data") +
+#  theme_standard
+#p9
+
+# plot # of SNPs per locus ----
+#p10 <- loc_stats_raw %>%
+#  count(CHR) %>%
+#  ggplot(aes(x = n)) +
+#  geom_histogram(binwidth = 1, color = "black", fill = "grey95") + 
+#  labs(x = "number of SNPs per locus") +
+#  theme_standard
+
+#temp <- loc_stats_raw %>%
+#  count(CHR)
+
+#p10
+
+# plot number of SNPs per contig vs. mean depth ----
+#p11 <- left_join(temp, loc_stats_raw) %>%
+#  ggplot() +
+#  geom_point(aes(x = n, y = MEAN_DEPTH_Alps_raw)) +
+#  labs(x = "number of SNPs per contig", y = "mean depth") +
+#  theme_standard
+#p11
+
+# plot depth vs SNP quality ----
+#site_qual <- read.table("resultsraw/Alps_raw.lqual", 
+#                        header = TRUE, stringsAsFactors = FALSE) %>%
+#  mutate(PROB = 10^(-QUAL/10))
+
+#temp <- data.frame(loc_stats_raw$MEAN_DEPTH_Alps_raw, site_qual$QUAL) %>%
+#  rename(depth = loc_stats_raw.MEAN_DEPTH_Alps_raw, qual = site_qual.QUAL)
+
+#p12 <- ggplot(temp, aes(x = depth, y = qual)) +
+#  geom_point(size = 1) +
+#  geom_vline(aes(xintercept = mean(depth, na.rm = TRUE)),
+#                 color = "red", linetype = "dashed", size = 1) +
+#  geom_vline(aes(xintercept = 20),
+#                 color = "darkblue", linetype = "dashed", size = 1) +
+#  geom_hline(aes(yintercept = mean(qual, na.rm = TRUE)),
+#                 color = "red", linetype = "dashed", size = 1) +
+#  geom_hline(aes(yintercept = 20),
+#                 color = "darkblue", linetype = "dashed", size = 1) +
+#  labs(x = "mean depth per locus", y = "SNP quality") +
+#  theme_standard
+#p12
+
+#m1 <- multiplot(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, cols=2)
+
+```
+
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
